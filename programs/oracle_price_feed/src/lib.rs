@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::clock::Clock;
+
 
 declare_id!("3Lrt5g6ef2RinghQRs3LVHeut4Rap81Z28wzigmqV3kF");
 
@@ -6,18 +8,57 @@ declare_id!("3Lrt5g6ef2RinghQRs3LVHeut4Rap81Z28wzigmqV3kF");
 pub mod oracle_price_feed {
     use super::*;
 
+        pub fn get_pyth_price(ctx: Context<GetPythPrice>,symbol:String) -> Result<PriceData> {
+        // Get the Pyth price account (passed in via ctx.accounts)
+        let price_feed = &ctx.accounts.price_feed;
+        let clock = Clock::get()?;
+        let current_time = clock.unix_timestamp;
+
+        let price_account = price_feed.try_borrow_data()?;
+        let price_feed_data = pyth_sdk_solana::load_price_feed_from_account(
+            &price_account
+        ).map_err(|_| OracleError::InvalidPriceFeed)?;
+
+        // Get the current price from Pyth
+        let current_price = price_feed_data
+            .get_current_price()
+            .ok_or(OracleError::NoPriceData)?;
+
+        let price_age = current_time - current_price.publish_time;
+        let config = &ctx.accounts.config;
+        
+        if price_age > config.max_staleness {
+            return Err(OracleError::StalePriceData.into());
+        }
+
+        let confidence_bps = (current_price.conf as u128)
+            .checked_mul(10000)
+            .ok_or(OracleError::MathOverflow)?
+            .checked_div(current_price.price.abs() as u128)
+            .ok_or(OracleError::MathOverflow)? as u64;
+
+        if confidence_bps > config.max_confidence {
+            return Err(OracleError::ConfidenceTooLarge.into());
+        }
+
+        Ok(PriceData {
+            price: current_price.price,
+            confidence: current_price.conf,
+            expo: current_price.expo,
+            timestamp: current_price.publish_time,
+            source: PriceSource::Pyth,
+        })
+    }
+
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         msg!("Greetings from: {:?}", ctx.program_id);
         Ok(())
     }
+
+
 }
 
-// ============================================================================
-// DATA STRUCTURES
-// ============================================================================
 
-/// Represents price data from any oracle source
-/// Think of this like a "Price Report" with all necessary info
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct PriceData {
     pub price: i64,
@@ -36,7 +77,6 @@ pub enum PriceSource {
 }
 
 /// Configuration for a trading symbol (e.g., BTC/USD)
-/// This is stored on-chain and defines rules for that symbol
 #[account]
 pub struct OracleConfig {
     pub symbol: String,
@@ -81,3 +121,16 @@ pub enum OracleError {
 
 #[derive(Accounts)]
 pub struct Initialize {}
+
+#[derive(Accounts)]
+#[instruction(symbol: String)]
+pub struct GetPythPrice<'info> {
+    pub price_feed: AccountInfo<'info>,
+
+    #[account(
+        seeds = [b"oracle-config", symbol.as_bytes()],
+        bump = config.bump,
+    )]
+    pub config: Account<'info, OracleConfig>,
+}
+
