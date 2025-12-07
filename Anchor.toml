@@ -2,17 +2,21 @@
 package_manager = "yarn"
 
 [features]
+seeds = false
 resolution = true
 skip-lint = false
 
 [programs.localnet]
 oracle_price_feed = "3Lrt5g6ef2RinghQRs3LVHeut4Rap81Z28wzigmqV3kF"
 
+[programs.devnet]
+oracle_price_feed = "3Lrt5g6ef2RinghQRs3LVHeut4Rap81Z28wzigmqV3kF"
+
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
