@@ -5,3 +5,23 @@ target
 node_modules
 test-ledger
 .yarn
+
+# Rust
+`Cargo.lock
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+
+# Database
+*.db
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
