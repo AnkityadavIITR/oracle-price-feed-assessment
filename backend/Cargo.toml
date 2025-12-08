@@ -1,6 +1,36 @@
 [package]
-name = "oracle-service"
+name = "oracle-backend"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+tokio = { version = "1.37", features = ["full"] }
+
+axum = "0.7.5"
+
+solana-client = "1.18"
+solana-sdk = "1.18"
+
+pyth-sdk-solana = "0.10"
+switchboard-v2 = "0.4"
+
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.117"
+
+sqlx = { version = "0.7.3", features = ["runtime-tokio-rustls", "postgres"] }
+
+redis = { version = "0.25", features = ["tokio-comp"] }
+
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+
+dotenvy = "0.15"
+
+anyhow = "1.0.86"
+thiserror = "1.0.61"
+
+rust_decimal = "1.36"
+
+async-trait = "0.1.80"
